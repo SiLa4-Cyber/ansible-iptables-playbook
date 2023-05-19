@@ -1,0 +1,35 @@
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+
+COMMIT
+
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+
+{% for port in tcp_firewall_list %}
+-A INPUT  -p tcp --dport {{ port }} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+-A OUTPUT -p tcp -m tcp --dport {{ port }} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+{% endfor %}
+
+{% for port in udp_firewall_list %}
+-A INPUT  -p udp --dport {{ port }} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+-A OUTPUT -p udp -m udp --dport {{ port }} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+{% endfor %}
+
+{% for port in reject_ports_list %}
+-A INPUT -p tcp -m tcp --dport {{ port }} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j REJECT
+-A INPUT  -p udp -m udp --dport {{ port }} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j REJECT
+{% endfor %}
+
+-A INPUT -i lo -j ACCEPT
+-A INPUT -p icmp -j ACCEPT
+-A FORWARD -j DROP
+-A OUTPUT -j ACCEPT
+
+COMMIT
+

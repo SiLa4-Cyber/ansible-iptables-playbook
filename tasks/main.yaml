@@ -1,0 +1,43 @@
+- name: Install packages
+  become: yes
+  apt: 
+    pkg:
+      - "iptables"
+      - "netfilter-persistent"
+    state: present
+    update_cache: yes
+
+- name: Сreate directory iptables
+  become: yes
+  file:
+    path: /etc/iptables
+    state: directory
+    owner: "root"
+    group: "root"
+    mode: "0644"
+
+- name: Convert string ports to list
+  set_fact:
+    tcp_firewall_list: "{{ tcp_firewall.split(',') }}"
+    udp_firewall_list: "{{ udp_firewall.split(',') }}"
+    reject_ports_list: "{{ reject_ports.split(',') }}"
+
+- name: Set iptables rule file
+  ansible.builtin.template:
+    src: rules.v4.j2
+    dest: /etc/iptables/rules.v4
+    owner: root
+    group: root
+    mode: "0644"
+    validate: iptables-restore --test %s
+  notify:
+    - Restart iptables
+
+- name: Start iptables
+  ansible.builtin.systemd:
+    state: started
+    daemon_reload: true
+    enabled: true
+    masked: false
+    name: netfilter-persistent
+
